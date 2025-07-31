@@ -98,6 +98,7 @@ def train_cirt(epochs, device, trainloader, model, optimizer, attack, style_tran
             loss.backward()
             optimizer.step()
             pbar.set_postfix(loss=loss.item())
+        torch.save(model.state_dict(), 'cirt_model.pth')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='CIRT Training')
