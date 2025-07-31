@@ -79,7 +79,7 @@ def train_cirt(model, trainloader, texture_loader, epochs, lr, lambda_invariance
             except StopIteration:
                 texture_iter = iter(texture_loader)
                 style_images, _ = next(texture_iter)
-            style_inputs = adain(inputs, style_images.to(device))
+            style_inputs = adain(inputs, style_images[:inputs.size(0)].to(device))
 
             optimizer.zero_grad(set_to_none=True)
             with torch.amp.autocast('cuda'):
