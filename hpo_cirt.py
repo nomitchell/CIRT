@@ -24,8 +24,8 @@ def evaluate(model, loader, attack=None):
     return 100. * correct / total
 
 def objective(trial):
-    lambda_invariance = trial.suggest_loguniform('lambda_invariance', 1e-2, 1.0)
-    lambda_noise = trial.suggest_loguniform('lambda_noise', 1e-2, 1.0)
+    lambda_invariance = trial.suggest_float('lambda_invariance', 1e-2, 1.0, log=True)
+    lambda_noise = trial.suggest_float('lambda_noise', 1e-2, 1.0, log=True)
     
     model = CIRT_Model().to(device)
     # Use a shorter training schedule for HPO

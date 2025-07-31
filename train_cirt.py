@@ -43,11 +43,13 @@ class InvarianceLoss(nn.Module):
         features = torch.cat([z1, z2], dim=0)
         similarity_matrix = torch.matmul(features, features.T) / self.temperature
         
+        # Create a mask to remove the diagonal elements (self-similarity)
+        mask = torch.eye(batch_size * 2, dtype=torch.bool, device=z1.device)
+        similarity_matrix = similarity_matrix.masked_fill(mask, -float('inf'))
+
+        # The labels are the indices of the positive pairs
         labels = torch.arange(batch_size, device=z1.device)
         labels = torch.cat([labels + batch_size, labels], dim=0)
-        
-        mask = torch.eye(batch_size * 2, dtype=torch.bool, device=z1.device)
-        similarity_matrix = similarity_matrix[~mask].view(batch_size * 2, -1)
         
         loss = self.criterion(similarity_matrix, labels)
         return loss
@@ -58,7 +60,7 @@ def train_cirt(model, trainloader, texture_loader, epochs, lr, lambda_invariance
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     criterion_ce = nn.CrossEntropyLoss()
     criterion_invariance = InvarianceLoss()
-    scaler = GradScaler()
+    scaler = torch.amp.GradScaler('cuda')
     
     attack = PGD(model, eps=8/255, alpha=2/255, steps=10)
 
@@ -80,7 +82,7 @@ def train_cirt(model, trainloader, texture_loader, epochs, lr, lambda_invariance
             style_inputs = adain(inputs, style_images.to(device))
 
             optimizer.zero_grad(set_to_none=True)
-            with autocast():
+            with torch.amp.autocast('cuda'):
                 logits_adv = model(adv_inputs)
                 logits_noisy = model(noisy_inputs)
                 _, proj_clean = model(inputs, with_projection=True)
