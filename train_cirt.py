@@ -10,7 +10,7 @@ from torchattacks import PGD
 from torch.cuda.amp import GradScaler, autocast
 
 from models.cirt_model import CIRT_Model
-from evaluate_cirt import evaluate_robustness
+from eval_utils import evaluate as evaluate_robustness
 
 import logging
 from utils import setup_logger

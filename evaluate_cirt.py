@@ -8,26 +8,12 @@ from torch.utils.data import DataLoader, TensorDataset
 from robustbench.utils import load_model
 from torchattacks import AutoAttack
 from models.cirt_model import CIRT_Model
+from eval_utils import evaluate
 from PIL import Image
 import requests
 import os
 
-def evaluate(model, loader, attack=None, device='cpu'):
-    correct = 0
-    total = 0
-    model.eval()
-    for inputs, targets in loader:
-        inputs, targets = inputs.to(device), targets.to(device)
-        if attack:
-            inputs = attack(inputs, targets)
-        with torch.no_grad():
-            outputs = model(inputs)
-            if isinstance(outputs, tuple):
-                outputs = outputs[0]
-            _, predicted = torch.max(outputs.data, 1)
-            total += targets.size(0)
-            correct += (predicted == targets).sum().item()
-    return 100. * correct / total
+
 
 def train_probe(probe, trainloader, testloader, epochs, device):
     criterion = nn.CrossEntropyLoss()

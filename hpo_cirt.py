@@ -10,21 +10,7 @@ from torch.utils.data import DataLoader, ConcatDataset, random_split
 import torch.nn as nn
 from torchvision.datasets import DTD
 from torchattacks import PGD
-
-def evaluate(model, loader, attack=None):
-    correct = 0
-    total = 0
-    model.eval()
-    for inputs, targets in loader:
-        inputs, targets = inputs.to(device), targets.to(device)
-        if attack:
-            inputs = attack(inputs, targets)
-        with torch.no_grad():
-            outputs = model(inputs)
-            _, predicted = torch.max(outputs.data, 1)
-            total += targets.size(0)
-            correct += (predicted == targets).sum().item()
-    return 100. * correct / total
+from eval_utils import evaluate
 
 def objective(trial):
     lambda_invariance = trial.suggest_float('lambda_invariance', 1e-2, 1.0, log=True)
