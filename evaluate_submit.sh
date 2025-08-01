@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=rrg-yymao
+#SBATCH --account=def-yymao
 #SBATCH --nodes=1
 #SBATCH --gpus-per-node=v100l:4
 #SBATCH --cpus-per-task=6  # Cores proportional to GPUs: 6 on Cedar, 16 on Graham.
