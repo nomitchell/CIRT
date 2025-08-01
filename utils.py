@@ -34,4 +34,3 @@ def setup_logger():
     stdout_logger = logging.getLogger('STDOUT')
     sys.stdout = StreamToLogger(stdout_logger, logging.INFO)
 
-    """""
