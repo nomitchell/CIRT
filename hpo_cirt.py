@@ -7,6 +7,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, ConcatDataset, random_split
+import torch.nn as nn
 from torchvision.datasets import DTD
 from torchattacks import PGD
 
@@ -38,7 +39,7 @@ def objective(trial):
                lambda_invariance=lambda_invariance, lambda_noise=lambda_noise, device=device)
     
     # Evaluate robust accuracy on a validation set
-    attack = PGD(model, eps=8/255, alpha=2/255, steps=10)
+    attack = PGD(model, eps=8/255, alpha=2/255, steps=7)
     robust_acc = evaluate(model, valloader, attack=attack)
     return robust_acc
 
