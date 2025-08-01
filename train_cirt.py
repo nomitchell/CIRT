@@ -11,6 +11,9 @@ from torch.cuda.amp import GradScaler, autocast
 
 from models.cirt_model import CIRT_Model
 
+import logging
+from utils import setup_logger
+
 # --- 1. AdaIN Style Augmentation & Contrastive Loss ---
 # AdaIN implementation (standard, based on the original paper)
 def calc_mean_std(feat, eps=1e-5):
@@ -101,19 +104,23 @@ def train_cirt(model, trainloader, texture_loader, epochs, lr, lambda_invariance
         scheduler.step()
 
 if __name__ == '__main__':
+    setup_logger()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     transform = transforms.ToTensor()
     train_set = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
-    trainloader = DataLoader(train_set, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)
+    trainloader = DataLoader(train_set, batch_size=512, shuffle=True, num_workers=8, pin_memory=True)
 
     texture_transform = transforms.Compose([transforms.Resize(32), transforms.CenterCrop(32), transforms.ToTensor()])
     texture_dataset = DTD(root='./data', split='train', download=True, transform=texture_transform)
     texture_dataset_full = ConcatDataset([texture_dataset] * (len(train_set) // len(texture_dataset) + 1))
-    texture_loader = DataLoader(texture_dataset_full, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)
+    texture_loader = DataLoader(texture_dataset_full, batch_size=512, shuffle=True, num_workers=8, pin_memory=True)
     
     cirt_model = CIRT_Model().to(device)
-    
+    if torch.cuda.device_count() > 1:
+        logging.info(f"Using {torch.cuda.device_count()} GPUs!")
+        cirt_model = nn.DataParallel(cirt_model)
+
     # These lambdas should be determined via HPO
     best_lambda_invariance = 0.1 
     best_lambda_noise = 0.2
@@ -121,4 +128,9 @@ if __name__ == '__main__':
     train_cirt(cirt_model, trainloader, texture_loader, epochs=100, lr=1e-3, 
                lambda_invariance=best_lambda_invariance, lambda_noise=best_lambda_noise, device=device)
     
-    torch.save(cirt_model.state_dict(), "cirt_final.pth")
+    logging.info("Training complete. Saving model...")
+    # Save the underlying model state_dict
+    if isinstance(cirt_model, nn.DataParallel):
+        torch.save(cirt_model.module.state_dict(), "cirt_final.pth")
+    else:
+        torch.save(cirt_model.state_dict(), "cirt_final.pth")

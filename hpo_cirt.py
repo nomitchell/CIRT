@@ -1,3 +1,5 @@
+import logging
+from utils import setup_logger
 import optuna
 from train_cirt import train_cirt, InvarianceLoss
 from models.cirt_model import CIRT_Model
@@ -28,6 +30,9 @@ def objective(trial):
     lambda_noise = trial.suggest_float('lambda_noise', 1e-2, 1.0, log=True)
     
     model = CIRT_Model().to(device)
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
+
     # Use a shorter training schedule for HPO
     train_cirt(model, trainloader, texture_loader, epochs=20, lr=1e-3,
                lambda_invariance=lambda_invariance, lambda_noise=lambda_noise, device=device)
@@ -38,19 +43,20 @@ def objective(trial):
     return robust_acc
 
 if __name__ == '__main__':
+    setup_logger()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     transform = transforms.ToTensor()
     train_set = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
     train_set, val_set = random_split(train_set, [45000, 5000])
-    trainloader = DataLoader(train_set, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)
-    valloader = DataLoader(val_set, batch_size=128, shuffle=False, num_workers=8, pin_memory=True)
+    trainloader = DataLoader(train_set, batch_size=512, shuffle=True, num_workers=8, pin_memory=True)
+    valloader = DataLoader(val_set, batch_size=512, shuffle=False, num_workers=8, pin_memory=True)
 
     texture_transform = transforms.Compose([transforms.Resize(32), transforms.CenterCrop(32), transforms.ToTensor()])
     texture_dataset = DTD(root='./data', split='train', download=True, transform=texture_transform)
     texture_dataset_full = ConcatDataset([texture_dataset] * (len(train_set) // len(texture_dataset) + 1))
-    texture_loader = DataLoader(texture_dataset_full, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)
+    texture_loader = DataLoader(texture_dataset_full, batch_size=512, shuffle=True, num_workers=8, pin_memory=True)
 
     study = optuna.create_study(direction='maximize')
     study.optimize(objective, n_trials=50)
-    print(f"Best HPO params: {study.best_params}")
+    logging.info(f"Best HPO params: {study.best_params}")
