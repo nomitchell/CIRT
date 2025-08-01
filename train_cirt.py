@@ -67,6 +67,7 @@ def train_cirt(model, trainloader, texture_loader, epochs, lr, lambda_invariance
     scaler = torch.amp.GradScaler('cuda')
     
     attack = PGD(model, eps=8/255, alpha=2/255, steps=10)
+    attack.set_device(device)
 
     for epoch in range(epochs):
         model.train()
