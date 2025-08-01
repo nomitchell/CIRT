@@ -34,5 +34,4 @@ def setup_logger():
     stdout_logger = logging.getLogger('STDOUT')
     sys.stdout = StreamToLogger(stdout_logger, logging.INFO)
 
-    stderr_logger = logging.getLogger('STDERR')
-    sys.stderr = StreamToLogger(stderr_logger, logging.ERROR)
+    """""

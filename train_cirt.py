@@ -10,6 +10,7 @@ from torchattacks import PGD
 from torch.cuda.amp import GradScaler, autocast
 
 from models.cirt_model import CIRT_Model
+from evaluate_cirt import evaluate_robustness
 
 import logging
 from utils import setup_logger
@@ -101,6 +102,8 @@ def train_cirt(model, trainloader, texture_loader, epochs, lr, lambda_invariance
             scaler.step(optimizer)
             scaler.update()
             
+        pbar.set_postfix(loss=loss.item(), loss_adv=loss_adv.item(), loss_invariance=loss_invariance.item(), loss_noise=loss_noise.item())
+            
         scheduler.step()
 
 if __name__ == '__main__':
@@ -115,6 +118,9 @@ if __name__ == '__main__':
     texture_dataset = DTD(root='./data', split='train', download=True, transform=texture_transform)
     texture_dataset_full = ConcatDataset([texture_dataset] * (len(train_set) // len(texture_dataset) + 1))
     texture_loader = DataLoader(texture_dataset_full, batch_size=512, shuffle=True, num_workers=8, pin_memory=True)
+    
+    test_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
+    testloader = DataLoader(test_set, batch_size=512, shuffle=False, num_workers=8, pin_memory=True)
     
     cirt_model = CIRT_Model().to(device)
     if torch.cuda.device_count() > 1:
@@ -134,3 +140,7 @@ if __name__ == '__main__':
         torch.save(cirt_model.module.state_dict(), "cirt_final.pth")
     else:
         torch.save(cirt_model.state_dict(), "cirt_final.pth")
+
+    logging.info("Evaluating robust accuracy...")
+    robust_acc = evaluate_robustness(cirt_model, testloader, device)
+    logging.info(f"Robust accuracy: {robust_acc*100:.2f}%")
