@@ -26,7 +26,7 @@ def objective(trial):
     
     # Evaluate robust accuracy on a validation set
     attack = PGD(model, eps=8/255, alpha=2/255, steps=7)
-    robust_acc = evaluate(model, valloader, attack=attack)
+    robust_acc = evaluate(model, valloader, attack=attack, device=device)
     trial.set_user_attr("robust_acc", robust_acc)
     logging.info(f"Trial {trial.number} finished with robust accuracy: {robust_acc:.2f}% and params: {trial.params}")
     return robust_acc
